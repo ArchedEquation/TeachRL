@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+models/
+.pytest_cache/
+*.zip
+.env
+uv.lock
+training_plots/*.tmp

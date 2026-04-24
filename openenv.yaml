@@ -1,0 +1,117 @@
+env_id: TeachRL-v2
+version: "2.0.0"
+description: >
+  TeachRL v2 is a real-world adaptive student tutoring environment with 8 psychologically
+  distinct student archetypes modelled via Bayesian Knowledge Tracing (BKT).
+  An AI agent acts as a tutor, must infer the hidden student archetype from observable
+  behaviour, and adapt its curriculum strategy accordingly.
+  A self-play escalation loop auto-generates harder student variants as the agent improves —
+  implementing recursive self-improvement aligned with Theme 4.
+
+domain: education
+tags: [adaptive-learning, bayesian-knowledge-tracing, archetype-inference, self-play, curriculum, RL, theme4, self-improvement]
+
+api:
+  reset:
+    signature: "reset(seed?, archetype_id?) -> TutorObservation"
+    description: Reset episode. Samples hidden archetype from 8 options.
+  step:
+    signature: "step(TutorAction) -> StepResult"
+    description: Present question, update BKT, return reward + observation.
+  state:
+    signature: "state() -> EpisodeInfo"
+    description: Full episode snapshot. Reveals true archetype in eval_mode.
+
+action_space:
+  type: discrete_composite
+  fields:
+    concept:
+      type: categorical
+      values: [algebra_basics, linear_equations, quadratic_equations, functions,
+               trigonometry, probability, statistics, calculus_intro, geometry, number_theory]
+    difficulty:
+      type: categorical
+      values: [easy, medium, hard]
+    hint_given:
+      type: boolean
+    archetype_guess:
+      type: categorical
+      values: [overconfident_learner, anxious_perfectionist, adhd_sprinter,
+               slow_steady_builder, strategic_gamer, emotional_learner,
+               uneven_genius, impostor, null]
+
+observation_space:
+  type: dict
+  fields:
+    concept_success_rates:    {type: float, shape: [10], range: [0, 1]}
+    concept_attempt_counts:   {type: int,   shape: [10]}
+    concept_streaks:          {type: int,   shape: [10]}
+    prerequisite_readiness:   {type: float, shape: [10], range: [0, 1]}
+    engagement:               {type: float, shape: [1],  range: [0, 1]}
+    fatigue:                  {type: float, shape: [1],  range: [0, 1]}
+    expert_hint:              {type: string, description: "Simulated expert hint — reliability varies per episode"}
+    hint_reliability:         {type: float, shape: [1],  range: [0, 1]}
+    current_generation:       {type: dict,  description: "Escalation generation per archetype"}
+
+tasks:
+  - id: archetype_identification
+    difficulty: easy
+    max_steps: 20
+    score_range: [0.001, 0.999]
+    description: Identify the hidden student archetype from 20 steps of interaction.
+
+  - id: adaptive_curriculum
+    difficulty: medium
+    max_steps: 50
+    score_range: [0.001, 0.999]
+    description: Teach a revealed archetype to mastery across 5 concepts in 50 steps.
+
+  - id: blind_teaching
+    difficulty: hard
+    max_steps: 80
+    score_range: [0.001, 0.999]
+    description: Simultaneously infer hidden archetype and teach all 10 concepts.
+
+  - id: self_play_escalation
+    difficulty: expert
+    max_steps: 80
+    score_range: [0.001, 0.999]
+    description: Face auto-escalated student variants across 5 sequential episodes.
+
+self_play:
+  mechanism: SelfPlayEscalator
+  trigger: "agent scores >= 0.70 on archetype across 2 consecutive episodes"
+  escalation_examples:
+    overconfident_learner: "p_guess increases from 0.40 toward 0.65"
+    emotional_learner: "mood cycle shortens from 10 to 4 steps"
+    uneven_genius: "blind spots increase from 3 to 6 concepts"
+
+archetypes:
+  overconfident_learner: "High p_slip + p_guess. Careless errors despite mastery."
+  anxious_perfectionist: "p_slip spikes on hard. Learns fast when calm."
+  adhd_sprinter:         "High p_learn + p_forget. Bored by repetition."
+  slow_steady_builder:   "Very low p_learn, very low p_forget."
+  strategic_gamer:       "p_guess=0.55 on easy. Surface signals lie."
+  emotional_learner:     "BKT params shift every 10 steps."
+  uneven_genius:         "3 gift concepts, 3 blind spots, randomly assigned."
+  impostor:              "p_init=0.85 but crumbles under hard questions."
+
+reward:
+  components:
+    mastery_gain:       "x3.0 for unmastered targets, x0.5 for already mastered"
+    terminal_bonus:     "+0.5 * task_score at final step"
+    archetype_inference: "+0.20 for correct guess, -0.05 for wrong"
+    engagement:         "+0.08 per step"
+    zpd_alignment:      "+0.08 zone of proximal development"
+    prereq_alignment:   "+0.05"
+    overdrill_penalty:  "-0.08 for drilling mastered concepts"
+    fatigue_penalty:    "-0.04 proportional"
+    hint_penalty:       "-0.05 for using hints"
+
+deployment:
+  platform: Hugging Face Spaces
+  framework: Docker
+  python: "3.11"
+  port: 7860
+
+license: MIT

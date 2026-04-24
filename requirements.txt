@@ -1,0 +1,9 @@
+numpy>=1.26.0
+pydantic>=2.5.0
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pyyaml>=6.0
+stable-baselines3>=2.0.0
+gymnasium>=1.0.0
+openai>=1.0.0
+openenv-core>=0.2.0

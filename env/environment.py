@@ -207,32 +207,51 @@ class TeachRLEnv:
     # ── Reward ────────────────────────────────────────────────────────────────
 
     def _compute_reward(self, action: TutorAction, correct: bool, delta: float) -> float:
+        # Composable reward rubric — 6 components, each measuring a distinct
+        # teaching quality. Hard to game: overdrill hurts, wrong guesses hurt,
+        # coverage diversity rewarded, engagement collapse ends episode.
         c   = action.concept
         pm  = self._prev_mastery.get(c, 0.0)
         thr = self.task_cfg.get("mastery_threshold", 0.70)
         tgt = self.task_cfg.get("target_concepts", CONCEPTS)
+        m   = self._sim.state.mastery
 
+        # Rubric 1: Mastery Progress — primary signal, 3x for unmastered targets
+        # Overdrill penalty strengthened to -0.15 (was -0.08)
         is_tgt = c in tgt
         done   = pm >= thr
-        wt     = 0.0 if not is_tgt else (0.5 if done else 3.0)
+        wt     = 0.0 if not is_tgt else (0.3 if done else 3.0)
+        r      = max(delta, 0.0) * wt
+        r     += -0.15 if (is_tgt and done) else 0.0
 
-        r  = max(delta, 0.0) * wt
-        r += -0.08 if (is_tgt and done) else 0.0
-        r += self._sim.state.engagement * 0.08
-        r += self._sim.prerequisite_readiness(c) * 0.05
-        t  = {"easy": 0.3, "medium": 0.55, "hard": 0.8}[action.difficulty]
-        r += float(np.exp(-4 * (self._sim.state.mastery[c] - t) ** 2)) * 0.08
-        r += 0.10 if correct else 0.0
+        # Rubric 2: Coverage Diversity — bonus for exploring new concepts
+        # Prevents exploitation of drilling one concept repeatedly
+        this_att = sum(self._sim.state.attempts[c].values())
+        r += 0.06 if (is_tgt and this_att <= 4) else 0.0
 
+        # Rubric 3: Pedagogical Quality — ZPD + prerequisites + engagement
+        t   = {"easy": 0.3, "medium": 0.55, "hard": 0.8}[action.difficulty]
+        zpd = float(np.exp(-4 * (m[c] - t) ** 2))
+        r  += zpd * 0.07
+        r  += self._sim.prerequisite_readiness(c) * 0.05
+        r  += self._sim.state.engagement * 0.07
+
+        # Rubric 4: Response Quality — correct answer weighted by ZPD alignment
+        # Easy correct on mastered concept worth less than hard correct in ZPD
+        r += (0.10 if correct else 0.0) * (0.5 + 0.5 * zpd)
+
+        # Rubric 5: Archetype Identification — correct +0.20, wrong -0.10
+        # Penalty doubled vs before: guessing wrong now meaningfully hurts
         if action.archetype_guess:
             aid = self._sim.archetype_id
-            r += 0.20 if (aid and action.archetype_guess == aid.value) else -0.05
+            r += 0.20 if (aid and action.archetype_guess == aid.value) else -0.10
 
+        # Rubric 6: Efficiency — terminal bonus + fatigue + hint penalties
         if self._step_count >= self.task_cfg["max_steps"] - 1:
             r += self._task_score() * 0.5
-
+        r += -self._sim.state.fatigue * 0.05
         r += -0.05 if action.hint_given else 0.0
-        r += -self._sim.state.fatigue * 0.04
+
         return float(np.clip(r, 0.0, 1.0))
 
     # ── Scoring ───────────────────────────────────────────────────────────────

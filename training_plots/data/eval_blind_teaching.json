@@ -1,0 +1,1 @@
+{"Random": {"score": 0.5868800516166395, "arch_acc": 0.0}, "Heuristic": {"score": 0.6887931558921231, "arch_acc": 0.0}, "Greedy": {"score": 0.6756536977386687, "arch_acc": 0.0}, "Inference": {"score": 0.7481370576067616, "arch_acc": 0.3}, "PPO+Clf": {"score": 0.7218606466692705, "arch_acc": 0.11770475354362639}}

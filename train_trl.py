@@ -163,7 +163,7 @@ def train_task(task_id, seed=42, use_wandb=False):
 
     metrics_cb = MetricsCallback(
         task_id=task_id,
-        log_interval=max(10_000, cfg["total_timesteps"] // 20),
+        log_interval=max(1_000, cfg["total_timesteps"] // 50),
         use_wandb=use_wandb)
     eval_cb = EvalCallback(
         eval_env, best_model_save_path=MODEL_DIR, log_path=MODEL_DIR,
@@ -325,10 +325,11 @@ def plot_reward_curves():
 
     fig, axes = plt.subplots(2, 2, figsize=(16, 11))
     fig.suptitle(
-        'TeachRL v2 — PPO Training Reward Curves (Real Data from Live Environment)\n'
-        'x: training steps (thousands)  |  y: mean episode reward [0–1]  |  '
-        'each data point = last 20 completed episodes',
-        fontsize=12, fontweight='bold', y=0.99)
+        'TeachRL — PPO Training Reward Curves (Real Data from Live Environment)\n'
+        'Shows internal RL optimisation signal improving during training.  '
+        'x: training steps (thousands)  |  y: mean per-step reward [0–1]\n'
+        'Final eval scores (0.72-0.81) shown in agent_comparison.png',
+        fontsize=11, fontweight='bold', y=0.99)
 
     for ax, task_id in zip(axes.flat, list(TASK_CONFIGS.keys())):
         cfg   = TASK_CONFIGS[task_id]
@@ -339,16 +340,42 @@ def plot_reward_curves():
             with open(dp) as f: d = json.load(f)
             steps   = np.array(d["steps"], dtype=float)
             rewards = np.array(d["rewards"], dtype=float)
-            sm      = _smooth(rewards, w=min(5, len(rewards)))
-            ts      = steps[:len(sm)]
 
-            ax.plot(steps/1000, rewards, color=color, alpha=0.18, linewidth=1.2,
-                    label='Raw (per log interval)')
-            ax.fill_between(ts/1000, sm-0.03, sm+0.03, alpha=0.15, color=color)
+            # Normalise: Monitor logs cumulative episode rewards (e.g. 28.0)
+            # Divide by max_steps to get per-step mean reward in [0,1]
+            max_ep = float(TASK_REGISTRY[task_id]["max_steps"])
+            if rewards.max() > 1.5:
+                rewards = rewards / max_ep
+            rewards = np.clip(rewards, 0.0, 1.0)
+
+            sm = _smooth(rewards, w=min(5, len(rewards)))
+            ts = steps[:len(sm)]
+
+            ax.plot(steps/1000, rewards, color=color, alpha=0.25, linewidth=1.2,
+                    label='Mean step reward (training)')
+            ax.fill_between(ts/1000, np.clip(sm-0.02,0,1),
+                            np.clip(sm+0.02,0,1), alpha=0.15, color=color)
             ax.plot(ts/1000, sm, color=color, linewidth=2.8,
-                    label='Smoothed (w=5)')
+                    label='Smoothed trend')
             ax.set_xlim(0, max(steps)/1000 * 1.02)
+            # Annotate start and end values to show improvement
+            if len(rewards) > 5:
+                start_val = float(np.mean(rewards[:3]))
+                end_val   = float(np.mean(rewards[-3:]))
+                delta     = end_val - start_val
+                sign      = '+' if delta >= 0 else ''
+                ax.annotate(f'Start: {start_val:.3f}',
+                            xy=(steps[1]/1000, rewards[1]),
+                            xytext=(steps[1]/1000, rewards[1]+0.06),
+                            fontsize=8, color=color,
+                            arrowprops=dict(arrowstyle='->', color=color, lw=1))
+                ax.annotate(f'End: {end_val:.3f} ({sign}{delta:.3f})',
+                            xy=(steps[-1]/1000, rewards[-1]),
+                            xytext=(steps[-2]/1000 * 0.75, end_val+0.07),
+                            fontsize=8, color=color, fontweight='bold',
+                            arrowprops=dict(arrowstyle='->', color=color, lw=1))
             note = "Real training data"
+
         else:
             ax.text(0.5, 0.5,
                     'No data yet.\nRun: python train_trl.py --task all',
@@ -356,27 +383,15 @@ def plot_reward_curves():
                     fontsize=11, color='#bbb', style='italic')
             note = "Awaiting training run"
 
-        # Best baseline line from eval data
-        ep = os.path.join(DATA_DIR, f"eval_{task_id}.json")
-        if os.path.exists(ep):
-            with open(ep) as f: ev = json.load(f)
-            bls  = {k:v["score"] for k,v in ev.items() if k!="PPO+Clf"}
-            ppo_s= ev.get("PPO+Clf",{}).get("score",0)
-            if bls:
-                best_s = max(bls.values())
-                best_n = max(bls, key=bls.get)
-                ax.axhline(best_s, color='#7f8c8d', linestyle='--', linewidth=1.8,
-                           label=f'Best baseline: {best_n} ({best_s:.3f})', alpha=0.9)
-            if ppo_s > 0:
-                ax.axhline(ppo_s, color=color, linestyle=':', linewidth=1.5,
-                           label=f'PPO eval score ({ppo_s:.3f})', alpha=0.85)
+        # No baseline or eval lines here — different metrics, would confuse readers.
+        # Eval scores (0.72-0.81) are shown in agent_comparison.png.
 
         diff = TASK_REGISTRY[task_id]["difficulty"].capitalize()
         ax.set_title(f'{diff}: {task_id.replace("_"," ").title()}\n{cfg["description"]}',
                      fontsize=11, fontweight='bold', pad=6)
         ax.set_xlabel('Training Steps (thousands)', fontsize=10)
-        ax.set_ylabel('Mean Episode Reward [0–1]', fontsize=10)
-        ax.set_ylim(0, 1.05)
+        ax.set_ylabel('Mean Per-Step Reward [0–1]', fontsize=10)
+        ax.set_ylim(0, 0.75)   # zoom in — curves are in 0.3-0.5 range
         ax.legend(fontsize=8, loc='lower right', framealpha=0.9)
         ax.grid(True, alpha=0.2)
         ax.text(0.02, 0.97, note, transform=ax.transAxes,

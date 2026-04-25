@@ -67,11 +67,20 @@ class PPOAgent:
             raise FileNotFoundError(f"No model at {path}. Run --train first.")
         self._model     = PPO.load(path)
         self._max_steps = TASK_REGISTRY[task_id]["max_steps"]
+        try:
+            from baseline.archetype_classifier import ArchetypeClassifier
+            self._clf = ArchetypeClassifier()
+        except Exception:
+            self._clf = None
+
     def __call__(self, obs_dict: dict) -> dict:
         vec = obs_to_vector(obs_dict, self._max_steps)
         action, _ = self._model.predict(vec, deterministic=True)
         c, d = int_to_action(int(action))
-        return {"concept": c, "difficulty": d, "hint_given": False, "archetype_guess": None}
+        guess = None
+        if self._clf and self._clf.is_loaded:
+            guess = self._clf.predict_from_obs(obs_dict)
+        return {"concept": c, "difficulty": d, "hint_given": False, "archetype_guess": guess}
 
 def evaluate_all(task_id: str, n_episodes: int = 10, seed: int = 42) -> dict:
     Cls = GRADER_REGISTRY[task_id]

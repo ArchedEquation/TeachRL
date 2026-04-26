@@ -24,16 +24,17 @@ license: mit
 | Random | 0.001 | 0.621 | 0.587 | 0.613 |
 | Heuristic | 0.001 | 0.781 | 0.689 | 0.684 |
 | Greedy | 0.001 | 0.791 | 0.676 | 0.610 |
-| Inference | 0.300 | 0.789 | **0.748** | 0.648 |
-| **PPO + Classifier** | **0.465** | **0.799** | 0.722 | **0.809** |
+| LLM Inference (Qwen-72B) | **0.854** | 0.498 | 0.738 | 0.710 |
+| **PPO + Classifier** | 0.465 | **0.799** | 0.722 | **0.809** |
 
-**PPO beats all baselines on 3/4 tasks:**
-- Easy (Identification): **+16.5%** — classifier identifies archetypes at 92.8% val accuracy
-- Medium (Curriculum): **+0.7%** — learned curriculum beats all hand-coded rules
-- Expert (Self-Play): **+12.5%** — proves Theme 4, agent improves as environment escalates
-- Mastery heatmap: **PPO +0.122** mean mastery improvement over Random across all archetypes
+**What the numbers tell us:**
+- **Easy (Identification):** LLM wins (0.854 vs 0.465) — language reasoning outperforms RL at explicit archetype identification from 20 steps
+- **Medium (Curriculum):** PPO wins (+0.7%) — learned curriculum sequencing beats both rules and LLM prompting
+- **Hard (Blind Teaching):** LLM competitive (0.738 vs 0.722) — reasoning helps when identification and teaching must happen simultaneously
+- **Expert (Self-Play):** PPO wins (+12.5%) — training on TeachRL adds +0.099 over raw LLM zero-shot (0.710), proving the environment adds measurable value beyond prompting
 
-**Self-improvement CONFIRMED** — 3 escalations triggered live, scores 0.84→0.91 as env got harder.
+**Self-improvement CONFIRMED** — 5 escalations triggered across 12 live episodes, scores 0.84→0.91 as environment got harder.
+**Mastery improvement:** PPO +0.122 over Random across all concepts and archetypes.
 
 ---
 
@@ -44,7 +45,7 @@ license: mit
 | **🤗 HuggingFace Space (Live API)** | https://huggingface.co/spaces/ArchedEquation/TeachRL |
 | **GitHub Repository** | https://github.com/ArchedEquation/TeachRL |
 | **Training Notebook (Colab)** | https://colab.research.google.com/github/ArchedEquation/TeachRL/blob/main/TeachRL_v2_Training.ipynb |
-| **Mini-Blog / Writeup** | *(add HF blog or YouTube link here)* |
+| **Mini-Blog / Writeup** | https://huggingface.co/blog/ArchedEquation/teachrl |
 
 ---
 
@@ -136,7 +137,7 @@ Each archetype breaks a different RL assumption — making it genuinely novel:
 
 ## Self-Play Escalation — Theme 4 Core
 
-When PPO consistently scores ≥0.70 on an archetype, the escalator auto-generates a harder variant:
+When the agent consistently scores ≥0.70 on an archetype, the escalator auto-generates a harder variant:
 
 ```
 PPO masters OverconfidentLearner (p_guess=0.40)
@@ -146,7 +147,7 @@ PPO masters OverconfidentLearner (p_guess=0.40)
     → Continues until training ends
 ```
 
-Each archetype escalates independently. Confirmed live: **3 escalations in 10 episodes**, scores improved from 0.84 → 0.91 as the environment got harder.
+Each archetype escalates independently. Confirmed live: **5 escalations across 12 episodes**, scores improved from 0.84 → 0.91 as the environment got harder.
 
 ---
 
@@ -156,7 +157,7 @@ Each archetype escalates independently. Confirmed live: **3 escalations in 10 ep
 
 ![Agent Comparison](training_plots/agent_comparison.png)
 
-*All 5 agents evaluated on all 4 tasks (seed=42, 10 episodes each, live environment rollouts). PPO+Classifier (red) beats every baseline on Easy (+16.5%), Medium (+0.7%), and Expert (+12.5%) tasks. Annotations show exact delta over best baseline. Hard task PPO (0.722) is within 2.6% of best baseline (Inference 0.748) and needs more training steps.*
+*All agents evaluated on all 4 tasks (seed=42, 10 episodes each, live environment rollouts). PPO+Classifier wins on Medium (+0.7%) and Expert (+12.5%). LLM Inference wins on Easy (0.854) using language reasoning for archetype identification. Hard task is competitive — LLM 0.738 vs PPO 0.722.*
 
 ---
 
@@ -164,15 +165,15 @@ Each archetype escalates independently. Confirmed live: **3 escalations in 10 ep
 
 ![Training Reward Curves](training_plots/reward_curves.png)
 
-*4 subplots — one per task. x-axis: training steps (thousands). y-axis: mean episode reward [0–1], averaged over last 20 completed episodes. Raw values shown faint, smoothed curve shown bold. Dashed line = best hand-coded baseline. Dotted line = PPO final evaluation score. All curves generated from real PPO training runs connecting live to the TeachRL environment — not a static dataset.*
+*4 subplots — one per task. x-axis: training steps (thousands). y-axis: mean per-step reward (normalised). Raw values shown faint, smoothed trend shown bold. Start and end values annotated — Hard task improves +0.065, Expert improves +0.069 across training. Final eval scores (0.72–0.81) shown in agent_comparison.png.*
 
 ---
 
-### Self-Play Escalation Evidence — Theme 4 Proof
+### Self-Play Escalation — Theme 4 Proof
 
 ![Self-Play Escalation](training_plots/self_play_escalation.png)
 
-*Top: episode scores coloured by hidden student archetype. Red dashed lines mark escalation events — each time PPO scored ≥0.70 on the same archetype twice, the environment made that archetype harder. 3 escalations triggered (strategic_gamer Gen 1, overconfident Gen 1 → Gen 2). Bottom-left: escalation generations per archetype after training. Bottom-right: early vs late episode score distribution — PPO improves even as the environment escalates.*
+*Top: PPO episode scores (dark) vs Qwen-72B zero-shot (orange dashed) across 12 episodes. PPO mean 0.869 vs LLM mean 0.443 — +0.43 training gain. Red dashed lines mark escalation events. Bottom-left: escalation generations per archetype. Bottom-right: PPO vs all baselines including LLM zero-shot on expert task.*
 
 ---
 
@@ -180,7 +181,7 @@ Each archetype escalates independently. Confirmed live: **3 escalations in 10 ep
 
 ![Mastery Heatmap](training_plots/mastery_heatmap.png)
 
-*10 math concepts (rows) × 8 student archetypes (columns). Colour = mastery achieved [0=red, 1=green]. Left: Random agent — inconsistent, archetype-blind. Right: PPO+Classifier — consistently higher mastery, especially for anxious_perfectionist (column 2, near-perfect green across all concepts). PPO+Clf mean mastery: 0.656 vs Random: 0.534 — **+0.122 improvement**. This shows the agent genuinely learned archetype-specific teaching strategies.*
+*10 math concepts (rows) × 8 student archetypes (columns). Colour = mastery achieved [0=red, 1=green]. Left: Random agent — inconsistent, archetype-blind. Right: PPO+Classifier — consistently higher mastery, especially for anxious_perfectionist (near-perfect green across all concepts). PPO+Clf mean mastery: 0.656 vs Random: 0.534 — **+0.122 improvement**.*
 
 ---
 
@@ -215,18 +216,32 @@ from baseline.archetype_classifier import train_classifier
 train_classifier(n_episodes=4000, epochs=80, seed=42)
 "
 
-# 2. Train PPO on all tasks (~30-40 min CPU)
+# 2. Train PPO on all tasks + generate plots (~30-40 min CPU)
 python train_trl.py --task all --eval --self-play
 
-# 3. Evaluate
+# 3. Evaluate all agents
 python baseline/rl_agent.py --eval --task all
+```
+
+### Run LLM Inference Agent
+
+```bash
+# Uses Qwen-72B via HF router — scores all 4 tasks
+export HF_TOKEN=your_token
+python inference.py
+
+# Or specific task
+TEACHRL_TASK=blind_teaching python inference.py
 ```
 
 ### Test Self-Improvement Live
 
 ```bash
-python test_self_improvement.py --episodes 10
-# Shows escalation events firing in real time
+# PPO agent — shows escalations firing
+python test_self_improvement.py --episodes 12
+
+# LLM zero-shot agent — shows baseline without training
+python test_self_improvement.py --llm --episodes 8
 ```
 
 ### Run the Live API
@@ -234,6 +249,7 @@ python test_self_improvement.py --episodes 10
 ```bash
 python app.py   # port 7860
 curl http://localhost:7860/
+# Swagger UI: http://localhost:7860/docs
 ```
 
 ---
@@ -243,33 +259,44 @@ curl http://localhost:7860/
 ```
 TeachRL/
 ├── env/
-│   ├── archetypes.py           # 8 student archetypes (BKT parameters)
-│   ├── student.py              # Bayesian Knowledge Tracing simulator
-│   ├── environment.py          # OpenEnv API: reset() / step() / state()
-│   └── gym_wrapper.py          # Gymnasium wrapper — Discrete(30), 45-dim obs
+│   ├── archetypes.py               # 8 student archetypes with BKT parameters
+│   ├── student.py                  # Bayesian Knowledge Tracing simulator
+│   ├── environment.py              # OpenEnv API: reset() / step() / state()
+│   └── gym_wrapper.py              # Gymnasium wrapper — Discrete(30), 45-dim obs
 ├── self_play/
-│   └── escalator.py            # Self-play difficulty escalation (Theme 4)
+│   └── escalator.py                # Self-play difficulty escalation (Theme 4)
 ├── graders/
-│   └── grader.py               # 4 task graders — scores in (0.001, 0.999)
+│   └── grader.py                   # 4 task graders — scores in (0.001, 0.999)
 ├── baseline/
-│   ├── agents.py               # Random, Heuristic, Greedy, Inference
-│   ├── archetype_classifier.py # Neural net classifier (92.8% val acc)
-│   ├── baseline_inference.py   # Heuristic evaluation script
-│   └── rl_agent.py             # PPO train + eval (uses classifier for guesses)
-├── training_plots/             # Real plots committed to repo
-│   ├── reward_curves.png       # Training curves from live environment
-│   ├── agent_comparison.png    # All agents on same axes
-│   ├── self_play_escalation.png# Escalation evidence
-│   └── mastery_heatmap.png     # PPO vs Random concept mastery
+│   ├── agents.py                   # Random, Heuristic, Greedy, Inference agents
+│   ├── archetype_classifier.py     # Neural net classifier (92.8% val acc)
+│   ├── baseline_inference.py       # Heuristic evaluation script
+│   └── rl_agent.py                 # PPO train + eval with classifier
+├── training_plots/
+│   ├── reward_curves.png           # Real training curves from live environment
+│   ├── agent_comparison.png        # All agents on same axes
+│   ├── self_play_escalation.png    # Escalation evidence + LLM vs PPO comparison
+│   ├── mastery_heatmap.png         # PPO vs Random concept mastery
+│   └── data/                       # Raw JSON training logs for plot generation
+├── logs/                           # Structured training logs (auto-created)
+│   └── run_YYYYMMDD_HHMMSS/        # One subfolder per training run
+│       ├── baseline_evaluation.log
+│       ├── training_summary.log
+│       └── <task>/training_<task>.log
 ├── tests/
-│   └── test_env.py             # 28 unit + integration tests
-├── train_trl.py                # HuggingFace TRL training script + plot generation
-├── test_self_improvement.py    # Live self-improvement demonstration
-├── TeachRL_v2_Training.ipynb   # Colab notebook
-├── inference.py                # OpenAI/HF client inference script
-├── app.py                      # FastAPI server
-├── openenv.yaml                # OpenEnv spec
-├── pyproject.toml              # openenv validate compliance
+│   └── test_env.py                 # 28 unit + integration tests
+├── train_trl.py                    # PPO training + evaluation + plot generation
+├── train_llm_trl.py                # LLM training via TRL GRPO
+├── test_self_improvement.py        # Live self-improvement demonstration
+├── eval_llm_baseline.py            # Evaluate raw LLM zero-shot performance
+├── logger.py                       # Structured training logger
+├── inference.py                    # OpenEnv inference script (LLM agent)
+├── TeachRL_v2_Training.ipynb       # 17-cell Colab training notebook
+├── app.py                          # FastAPI server (port 7860)
+├── BLOG.md                         # Full writeup
+├── openenv.yaml                    # OpenEnv spec
+├── pyproject.toml                  # openenv validate compliance
+├── requirements.txt
 └── Dockerfile
 ```
 

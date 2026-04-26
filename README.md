@@ -8,7 +8,7 @@ pinned: false
 license: mit
 ---
 
-# 🎓 TeachRL — The AI Tutor That Learns How to Teach
+# 🎓 TeachRL - The AI Tutor That Learns How to Teach
 
 [![OpenEnv](https://img.shields.io/badge/OpenEnv-compliant-green)](https://openenv.ai)
 [![Theme 4](https://img.shields.io/badge/Theme-4%3A%20Self--Improvement-purple)](https://huggingface.co/spaces/ArchedEquation/TeachRL)
@@ -17,7 +17,7 @@ license: mit
 
 ---
 
-## 🏆 Key Results (Real Evaluation — seed=42, 10 episodes)
+## 🏆 Key Results (Real Evaluation - seed=42, 10 episodes)
 
 | Agent | Easy (ID) | Medium | Hard | **Expert** |
 |---|---|---|---|---|
@@ -28,12 +28,12 @@ license: mit
 | **PPO + Classifier** | 0.465 | **0.799** | 0.722 | **0.809** |
 
 **What the numbers tell us:**
-- **Easy (Identification):** LLM wins (0.854 vs 0.465) — language reasoning outperforms RL at explicit archetype identification from 20 steps
-- **Medium (Curriculum):** PPO wins (+0.7%) — learned curriculum sequencing beats both rules and LLM prompting
-- **Hard (Blind Teaching):** LLM competitive (0.738 vs 0.722) — reasoning helps when identification and teaching must happen simultaneously
-- **Expert (Self-Play):** PPO wins (+12.5%) — training on TeachRL adds +0.099 over raw LLM zero-shot (0.710), proving the environment adds measurable value beyond prompting
+- **Easy (Identification):** LLM wins (0.854 vs 0.465) - language reasoning outperforms RL at explicit archetype identification from 20 steps
+- **Medium (Curriculum):** PPO wins (+0.7%) - learned curriculum sequencing beats both rules and LLM prompting
+- **Hard (Blind Teaching):** LLM competitive (0.738 vs 0.722) - reasoning helps when identification and teaching must happen simultaneously
+- **Expert (Self-Play):** PPO wins (+12.5%) - training on TeachRL adds +0.099 over raw LLM zero-shot (0.710), proving the environment adds measurable value beyond prompting
 
-**Self-improvement CONFIRMED** — 5 escalations triggered across 12 live episodes, scores 0.84→0.91 as environment got harder.
+**Self-improvement CONFIRMED** - 5 escalations triggered across 12 live episodes, scores 0.84→0.91 as environment got harder.
 **Mastery improvement:** PPO +0.122 over Random across all concepts and archetypes.
 
 ---
@@ -51,14 +51,14 @@ license: mit
 
 ## The Problem
 
-Most AI tutoring systems treat every student identically. Real students are fundamentally different — one gets bored if questions repeat, another panics under pressure, a third is secretly faking prior knowledge.
+Most AI tutoring systems treat every student identically. Real students are fundamentally different - one gets bored if questions repeat, another panics under pressure, a third is secretly faking prior knowledge.
 
 **TeachRL forces an AI agent to solve two coupled problems simultaneously:**
 
 1. **Identify** which of 8 hidden student archetypes it is teaching (92.8% classifier accuracy)
 2. **Adapt** its curriculum in real-time to that student's learning style
 
-Neither problem is fully solvable without solving the other. As the agent improves, a **self-play escalation loop** generates harder student variants — implementing recursive self-improvement (Theme 4).
+Neither problem is fully solvable without solving the other. As the agent improves, a **self-play escalation loop** generates harder student variants - implementing recursive self-improvement (Theme 4).
 
 ---
 
@@ -74,7 +74,7 @@ At each step the agent chooses:
 - Per-concept: success rate, attempt count, current streak, prerequisite readiness
 - Global: engagement level, fatigue, steps remaining, hint reliability, last answer correct
 
-The agent **never sees true mastery or the archetype** — it must infer both from observable signals only.
+The agent **never sees true mastery or the archetype** - it must infer both from observable signals only.
 
 ### Two-Model Architecture
 
@@ -92,7 +92,7 @@ Combined action: {concept, difficulty, archetype_guess}
     → TeachRL Environment executes → returns reward [0,1]
 ```
 
-### Reward Function — 6 Composable Rubrics (Hard to Game)
+### Reward Function - 6 Composable Rubrics (Hard to Game)
 
 | Rubric | Signal | Anti-Gaming Design |
 |---|---|---|
@@ -109,7 +109,7 @@ All rewards clipped to [0, 1]. Scores strictly in (0.001, 0.999).
 
 ## The 8 Student Archetypes (Hidden from Agent)
 
-Each archetype breaks a different RL assumption — making it genuinely novel:
+Each archetype breaks a different RL assumption - making it genuinely novel:
 
 | Archetype | Key BKT Signature | RL Challenge |
 |---|---|---|
@@ -135,7 +135,7 @@ Each archetype breaks a different RL assumption — making it genuinely novel:
 
 ---
 
-## Self-Play Escalation — Theme 4 Core
+## Self-Play Escalation - Theme 4 Core
 
 When the agent consistently scores ≥0.70 on an archetype, the escalator auto-generates a harder variant:
 
@@ -153,35 +153,35 @@ Each archetype escalates independently. Confirmed live: **5 escalations across 1
 
 ## Results
 
-### Agent Comparison — All Baselines on Same Axes
+### Agent Comparison - All Baselines on Same Axes
 
 ![Agent Comparison](training_plots/agent_comparison.png)
 
-*All agents evaluated on all 4 tasks (seed=42, 10 episodes each, live environment rollouts). PPO+Classifier wins on Medium (+0.7%) and Expert (+12.5%). LLM Inference wins on Easy (0.854) using language reasoning for archetype identification. Hard task is competitive — LLM 0.738 vs PPO 0.722.*
+*All agents evaluated on all 4 tasks (seed=42, 10 episodes each, live environment rollouts). PPO+Classifier wins on Medium (+0.7%) and Expert (+12.5%). LLM Inference wins on Easy (0.854) using language reasoning for archetype identification. Hard task is competitive - LLM 0.738 vs PPO 0.722.*
 
 ---
 
-### Training Reward Curves — Real Data from Live Environment
+### Training Reward Curves - Real Data from Live Environment
 
 ![Training Reward Curves](training_plots/reward_curves.png)
 
-*4 subplots — one per task. x-axis: training steps (thousands). y-axis: mean per-step reward (normalised). Raw values shown faint, smoothed trend shown bold. Start and end values annotated — Hard task improves +0.065, Expert improves +0.069 across training. Final eval scores (0.72–0.81) shown in agent_comparison.png.*
+*4 subplots - one per task. x-axis: training steps (thousands). y-axis: mean per-step reward (normalised). Raw values shown faint, smoothed trend shown bold. Start and end values annotated - Hard task improves +0.065, Expert improves +0.069 across training. Final eval scores (0.72–0.81) shown in agent_comparison.png.*
 
 ---
 
-### Self-Play Escalation — Theme 4 Proof
+### Self-Play Escalation - Theme 4 Proof
 
 ![Self-Play Escalation](training_plots/self_play_escalation.png)
 
-*Top: PPO episode scores (dark) vs Qwen-72B zero-shot (orange dashed) across 12 episodes. PPO mean 0.869 vs LLM mean 0.443 — +0.43 training gain. Red dashed lines mark escalation events. Bottom-left: escalation generations per archetype. Bottom-right: PPO vs all baselines including LLM zero-shot on expert task.*
+*Top: PPO episode scores (dark) vs Qwen-72B zero-shot (orange dashed) across 12 episodes. PPO mean 0.869 vs LLM mean 0.443 - +0.43 training gain. Red dashed lines mark escalation events. Bottom-left: escalation generations per archetype. Bottom-right: PPO vs all baselines including LLM zero-shot on expert task.*
 
 ---
 
-### Concept Mastery Heatmap — PPO vs Random
+### Concept Mastery Heatmap - PPO vs Random
 
 ![Mastery Heatmap](training_plots/mastery_heatmap.png)
 
-*10 math concepts (rows) × 8 student archetypes (columns). Colour = mastery achieved [0=red, 1=green]. Left: Random agent — inconsistent, archetype-blind. Right: PPO+Classifier — consistently higher mastery, especially for anxious_perfectionist (near-perfect green across all concepts). PPO+Clf mean mastery: 0.656 vs Random: 0.534 — **+0.122 improvement**.*
+*10 math concepts (rows) × 8 student archetypes (columns). Colour = mastery achieved [0=red, 1=green]. Left: Random agent - inconsistent, archetype-blind. Right: PPO+Classifier - consistently higher mastery, especially for anxious_perfectionist (near-perfect green across all concepts). PPO+Clf mean mastery: 0.656 vs Random: 0.534 - **+0.122 improvement**.*
 
 ---
 
@@ -189,10 +189,10 @@ Each archetype escalates independently. Confirmed live: **5 escalations across 1
 
 Every major EdTech platform (Khan Academy, Duolingo, Carnegie Learning) uses Bayesian Knowledge Tracing in production but treats all students identically. TeachRL models the next frontier: **persona-aware adaptive curriculum generation under uncertainty**.
 
-**Could a researcher write a paper about training on this?** Yes — TeachRL combines three properties no existing benchmark has together:
-1. Hidden discrete latent variable (archetype) — a Partially Observable MDP
+**Could a researcher write a paper about training on this?** Yes - TeachRL combines three properties no existing benchmark has together:
+1. Hidden discrete latent variable (archetype) - a Partially Observable MDP
 2. Non-stationary dynamics (Emotional Learner mood cycle breaks stationarity)
-3. Adaptive adversarial curriculum (self-play escalation) — environment co-evolves with agent
+3. Adaptive adversarial curriculum (self-play escalation) - environment co-evolves with agent
 
 ---
 
@@ -226,7 +226,7 @@ python baseline/rl_agent.py --eval --task all
 ### Run LLM Inference Agent
 
 ```bash
-# Uses Qwen-72B via HF router — scores all 4 tasks
+# Uses Qwen-72B via HF router - scores all 4 tasks
 export HF_TOKEN=your_token
 python inference.py
 
@@ -237,10 +237,10 @@ TEACHRL_TASK=blind_teaching python inference.py
 ### Test Self-Improvement Live
 
 ```bash
-# PPO agent — shows escalations firing
+# PPO agent - shows escalations firing
 python test_self_improvement.py --episodes 12
 
-# LLM zero-shot agent — shows baseline without training
+# LLM zero-shot agent - shows baseline without training
 python test_self_improvement.py --llm --episodes 8
 ```
 
@@ -262,11 +262,11 @@ TeachRL/
 │   ├── archetypes.py               # 8 student archetypes with BKT parameters
 │   ├── student.py                  # Bayesian Knowledge Tracing simulator
 │   ├── environment.py              # OpenEnv API: reset() / step() / state()
-│   └── gym_wrapper.py              # Gymnasium wrapper — Discrete(30), 45-dim obs
+│   └── gym_wrapper.py              # Gymnasium wrapper - Discrete(30), 45-dim obs
 ├── self_play/
 │   └── escalator.py                # Self-play difficulty escalation (Theme 4)
 ├── graders/
-│   └── grader.py                   # 4 task graders — scores in (0.001, 0.999)
+│   └── grader.py                   # 4 task graders - scores in (0.001, 0.999)
 ├── baseline/
 │   ├── agents.py                   # Random, Heuristic, Greedy, Inference agents
 │   ├── archetype_classifier.py     # Neural net classifier (92.8% val acc)
@@ -319,4 +319,4 @@ TeachRL/
 
 ## License
 
-MIT © | Meta PyTorch Hackathon x Scaler 2025
+MIT © | Meta PyTorch Hackathon x Scaler 2026

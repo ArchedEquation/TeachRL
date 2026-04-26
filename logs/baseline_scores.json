@@ -1,8 +1,8 @@
 {
-  "self_play_escalation": {
-    "Random": 0.6134430755523549,
-    "Heuristic": 0.6836345973659206,
-    "Greedy": 0.6104869032103338,
-    "Inference": 0.647986961233038
+  "archetype_identification": {
+    "Random": 0.0010000000000000002,
+    "Heuristic": 0.0010000000000000002,
+    "Greedy": 0.0010000000000000002,
+    "Inference": 0.3004
   }
 }

@@ -45,7 +45,7 @@ license: mit
 | **🤗 HuggingFace Space (Live API)** | https://huggingface.co/spaces/ArchedEquation/TeachRL |
 | **GitHub Repository** | https://github.com/ArchedEquation/TeachRL |
 | **Training Notebook (Colab)** | https://colab.research.google.com/github/ArchedEquation/TeachRL/blob/main/TeachRL_v2_Training.ipynb |
-| **Mini-Blog / Writeup** | https://huggingface.co/blog/ArchedEquation/teachrl |
+| **Mini-Blog / Writeup** | https://huggingface.co/spaces/ArchedEquation/TeachRL/blob/main/BLOG.md|
 
 ---
 
@@ -319,4 +319,4 @@ TeachRL/
 
 ## License
 
-MIT © VIT-AP University | Meta PyTorch Hackathon x Scaler 2025
+MIT © | Meta PyTorch Hackathon x Scaler 2025

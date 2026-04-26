@@ -1,0 +1,42 @@
+======================================================================
+  TeachRL — PPO Training Log
+  Task:       archetype_identification  🟢 Easy
+  Started:    2026-04-26 13:28:52
+  Seed:       42
+  Timesteps:  100,000
+  Envs:       4 parallel
+  Net arch:   [64, 64]
+----------------------------------------------------------------------
+  PPO Hyperparameters:
+    learning_rate          0.0002
+    batch_size             256
+    n_epochs               10
+    gamma                  0.999
+    gae_lambda             0.95
+    clip_range             0.2
+    ent_coef               0.02
+    vf_coef                0.5
+    max_grad_norm          0.5
+======================================================================
+
+  Step  10,000/100,000 ( 10.0%) │ reward=  7.806 │ [█████████░░░░░░░░░░░░░░░░] │ fps= 2295 │ elapsed=00:04 │ eta=00:39
+  Step  20,000/100,000 ( 20.0%) │ reward=  7.920 │ [█████████░░░░░░░░░░░░░░░░] │ fps= 2409 │ elapsed=00:08 │ eta=00:33
+  Step  30,000/100,000 ( 30.0%) │ reward=  7.956 │ [█████████░░░░░░░░░░░░░░░░] │ fps= 2457 │ elapsed=00:12 │ eta=00:28
+  Step  40,000/100,000 ( 40.0%) │ reward=  8.147 │ [██████████░░░░░░░░░░░░░░░] │ fps= 2483 │ elapsed=00:16 │ eta=00:24
+  Step  50,000/100,000 ( 50.0%) │ reward=  8.049 │ [██████████░░░░░░░░░░░░░░░] │ fps= 2494 │ elapsed=00:20 │ eta=00:20
+  Step  60,000/100,000 ( 60.0%) │ reward=  8.023 │ [██████████░░░░░░░░░░░░░░░] │ fps= 2501 │ elapsed=00:23 │ eta=00:15
+  Step  70,000/100,000 ( 70.0%) │ reward=  8.153 │ [██████████░░░░░░░░░░░░░░░] │ fps= 2507 │ elapsed=00:27 │ eta=00:11
+  Step  80,000/100,000 ( 80.0%) │ reward=  8.138 │ [██████████░░░░░░░░░░░░░░░] │ fps= 2512 │ elapsed=00:31 │ eta=00:07
+  Step  90,000/100,000 ( 90.0%) │ reward=  8.134 │ [██████████░░░░░░░░░░░░░░░] │ fps= 2528 │ elapsed=00:35 │ eta=00:03
+  Step 100,000/100,000 (100.0%) │ reward=  8.209 │ [██████████░░░░░░░░░░░░░░░] │ fps= 2528 │ elapsed=00:39 │ eta=00:00
+
+======================================================================
+  TRAINING COMPLETE
+  Total time:    00:39
+  Model saved:   /home/praneeth-yeddu/teachrl/teachrl2/models/ppo_archetype_identification.zip
+  Log file:      /home/praneeth-yeddu/teachrl/teachrl2/logs/run_20260426_132852/archetype_identification/training_archetype_identification.log
+  Reward start:  7.8941 (mean of first 3 checkpoints)
+  Reward end:    8.1604 (mean of last 3 checkpoints)
+  Improvement:   +0.2663
+  Peak reward:   8.2091 @ step 100,000
+======================================================================

@@ -314,6 +314,8 @@ def train_llm(
     print(f"  Dataset size: {len(dataset)} samples")
 
     # GRPO config
+    import torch
+    use_cpu = not torch.cuda.is_available()
     config = GRPOConfig(
         output_dir=save_dir,
         max_steps=max_steps,
@@ -324,9 +326,12 @@ def train_llm(
         logging_steps=25,
         save_steps=100,
         report_to="none",
-        max_completion_length=80,   # was max_new_tokens in older TRL
+        max_completion_length=80,
         temperature=0.7,
-        num_generations=2,          # completions per prompt (keep low for CPU)
+        num_generations=2,
+        use_cpu=use_cpu,            # required when no GPU available
+        bf16=False,                 # disable bf16 on CPU
+        fp16=False,
     )
 
     reward_fn = make_reward_fn(task_id=task_id)

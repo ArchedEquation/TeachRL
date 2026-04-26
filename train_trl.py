@@ -163,7 +163,7 @@ def train_task(task_id, seed=42, use_wandb=False):
 
     metrics_cb = MetricsCallback(
         task_id=task_id,
-        log_interval=max(1_000, cfg["total_timesteps"] // 50),
+        log_interval=max(10_000, cfg["total_timesteps"] // 50),
         use_wandb=use_wandb)
     eval_cb = EvalCallback(
         eval_env, best_model_save_path=MODEL_DIR, log_path=MODEL_DIR,

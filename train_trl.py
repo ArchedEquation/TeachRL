@@ -42,6 +42,10 @@ from env.environment import TeachRLEnv, TASK_REGISTRY
 from env.archetypes import ALL_ARCHETYPES, CONCEPTS
 from graders.grader import GRADER_REGISTRY
 from self_play.escalator import SelfPlayEscalator, EpisodeResult
+from logger import TeachRLLogger, SummaryLogger
+
+LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
@@ -107,7 +111,8 @@ _makedirs()
 # ── Callback ──────────────────────────────────────────────────────────────────
 
 class MetricsCallback(BaseCallback):
-    def __init__(self, task_id, log_interval=10_000, use_wandb=False):
+    def __init__(self, task_id, task_cfg, ppo_cfg, seed,
+                 log_interval=10_000, use_wandb=False):
         super().__init__()
         self.task_id            = task_id
         self.log_interval       = log_interval
@@ -117,6 +122,7 @@ class MetricsCallback(BaseCallback):
         self.step_history:    list = []
         self.reward_history:  list = []
         self._episode_rewards: list = []
+        self._trl_logger = TeachRLLogger(task_id, task_cfg, ppo_cfg, seed)
 
     def _on_step(self):
         for info in self.locals.get("infos", []):
@@ -126,10 +132,18 @@ class MetricsCallback(BaseCallback):
             elapsed     = time.time() - self._t0
             fps         = self.num_timesteps / max(elapsed, 1)
             mean_reward = float(np.mean(self._episode_rewards[-20:])) if self._episode_rewards else 0.0
+            total_steps = self.model.num_timesteps if hasattr(self.model, 'num_timesteps') else self._last_log
             self.step_history.append(self.num_timesteps)
             self.reward_history.append(mean_reward)
-            print(f"  [{self.task_id}] step={self.num_timesteps:>7,} | "
-                  f"reward={mean_reward:>6.3f} | fps={fps:>5.0f} | elapsed={elapsed:>5.0f}s")
+            # Log to file + console via TeachRLLogger
+            self._trl_logger.log_step(
+                step=self.num_timesteps,
+                total_steps=self.locals.get("total_timesteps", self.num_timesteps),
+                mean_reward=mean_reward,
+                episode_rewards=self._episode_rewards,
+                fps=fps,
+                elapsed=elapsed,
+            )
             if self.use_wandb and HAS_WANDB:
                 wandb.log({f"{self.task_id}/mean_reward": mean_reward,
                            "global_step": self.num_timesteps})
@@ -163,6 +177,9 @@ def train_task(task_id, seed=42, use_wandb=False):
 
     metrics_cb = MetricsCallback(
         task_id=task_id,
+        task_cfg={**cfg, "max_steps": max_steps},
+        ppo_cfg=PPO_HYPERPARAMS,
+        seed=seed,
         log_interval=max(10_000, cfg["total_timesteps"] // 50),
         use_wandb=use_wandb)
     eval_cb = EvalCallback(
@@ -178,10 +195,16 @@ def train_task(task_id, seed=42, use_wandb=False):
                 progress_bar=False)
     elapsed = time.time() - t0
 
-    model.save(os.path.join(MODEL_DIR, f"ppo_{task_id}"))
+    save_path = os.path.join(MODEL_DIR, f"ppo_{task_id}")
+    model.save(save_path)
     print(f"\n  Model saved → models/ppo_{task_id}.zip  ({elapsed:.0f}s)")
 
-    # Save raw training data
+    # Log completion and save JSON via logger
+    metrics_cb._trl_logger.log_training_complete(save_path + ".zip")
+    metrics_cb._trl_logger.save_data_for_plots()
+    metrics_cb._trl_logger.close()
+
+    # Also save raw data for plotting (backward compat)
     with open(os.path.join(DATA_DIR, f"training_{task_id}.json"), "w") as f:
         json.dump({"task_id": task_id,
                    "steps":   metrics_cb.step_history,
@@ -550,6 +573,47 @@ def plot_self_improvement():
     ax1.text(eps[-1]+0.1, 0.71, 'escalation threshold (0.70)',
              fontsize=8, color='#e74c3c')
 
+    # ── LLM zero-shot scores from actual run ────────────────────────────────
+    # Scores from test_self_improvement.py --llm --episodes 8
+    # Qwen/Qwen2.5-72B-Instruct, zero-shot, no RL training
+    LLM_EPISODES = [0.2523, 0.4139, 0.3970, 0.5243,
+                    0.5403, 0.4889, 0.4799, 0.4495]
+    LLM_MEAN = float(np.mean(LLM_EPISODES))
+
+    # Plot LLM episode scores as orange dots with dashed line
+    llm_eps = list(range(1, len(LLM_EPISODES)+1))
+    ax1.plot(llm_eps, LLM_EPISODES, 'o--', color='#e67e22',
+             linewidth=2, markersize=7, alpha=0.85, zorder=4,
+             label=f'Qwen-72B zero-shot (mean={LLM_MEAN:.3f})')
+    ax1.fill_between(llm_eps, LLM_EPISODES,
+                     alpha=0.07, color='#e67e22')
+    # Mean line
+    ax1.axhline(LLM_MEAN, color='#e67e22', linestyle=':',
+                linewidth=1.5, alpha=0.6)
+    ax1.text(llm_eps[-1]+0.1, LLM_MEAN+0.01,
+             f'LLM mean: {LLM_MEAN:.3f}',
+             fontsize=8, color='#e67e22', fontweight='bold')
+
+    # PPO mean line for comparison
+    ppo_mean = float(np.mean(scores))
+    ax1.axhline(ppo_mean, color='#2c3e50', linestyle=':',
+                linewidth=1.5, alpha=0.5)
+    ax1.text(0.5, ppo_mean+0.01,
+             f'PPO mean: {ppo_mean:.3f}',
+             fontsize=8, color='#2c3e50', fontweight='bold')
+
+    # Training gain annotation
+    gain = ppo_mean - LLM_MEAN
+    if gain > 0:
+        mid_ep = max(llm_eps[-1], sp["episodes"]) * 0.6
+        ax1.annotate('',
+            xy=(mid_ep, ppo_mean),
+            xytext=(mid_ep, LLM_MEAN),
+            arrowprops=dict(arrowstyle='<->', color='#27ae60', lw=2.5))
+        ax1.text(mid_ep + 0.2, (ppo_mean+LLM_MEAN)/2,
+                 f'+{gain:.3f} training gain',
+                 fontsize=9, color='#27ae60', fontweight='bold', va='center')
+
     # Legend for archetype dots
     from matplotlib.lines import Line2D
     handles = [Line2D([0],[0], marker='o', color='w',
@@ -557,6 +621,9 @@ def plot_self_improvement():
                       markersize=9, label=a.value.replace('_',' '))
                for a in ALL_ARCHETYPES
                if a.value in archs]
+    handles.append(Line2D([0],[0], color='#e67e22', linestyle='--',
+                           linewidth=2, marker='o', markersize=7,
+                           label='Qwen-72B zero-shot (no training)'))
     ax1.legend(handles=handles, fontsize=7.5, loc='lower left',
                ncol=4, framealpha=0.9, title='Student Archetype (dot colour)')
 
@@ -596,40 +663,93 @@ def plot_self_improvement():
     ax2.spines['top'].set_visible(False)
     ax2.spines['right'].set_visible(False)
 
-    # ── C: Early vs Late violin ───────────────────────────────────────────────
+    # ── C: PPO vs Baselines vs Raw LLM (no training) ────────────────────────────
     ax3 = fig.add_subplot(gs[1, 1])
-    n     = len(scores)
-    half  = max(n//2, 1)
-    early = scores[:half]
-    late  = scores[half:]
-    m_e   = np.mean(early)
-    m_l   = np.mean(late)
-    delta = m_l - m_e
 
-    parts = ax3.violinplot([early, late], positions=[1,2],
-                            showmeans=True, showmedians=True)
-    for pc in parts['bodies']:
-        pc.set_alpha(0.55)
-    parts['bodies'][0].set_facecolor('#85c1e9')
-    parts['bodies'][1].set_facecolor('#e74c3c')
-    ax3.scatter([1]*len(early), early, color='#3498db', s=60, alpha=0.75, zorder=3)
-    ax3.scatter([2]*len(late),  late,  color='#c0392b', s=60, alpha=0.75, zorder=3)
+    # Load eval scores
+    ep_path  = os.path.join(DATA_DIR, "eval_self_play_escalation.json")
+    llm_path = os.path.join(DATA_DIR, "llm_baseline_scores.json")
 
-    ax3.set_xticks([1, 2])
-    ax3.set_xticklabels(
-        [f'Early\n(ep 1–{half})\nmean={m_e:.3f}',
-         f'Late\n(ep {half+1}–{n})\nmean={m_l:.3f}'],
-        fontsize=10)
-    ax3.set_ylabel('Task Score  [0–1]', fontsize=10)
-    sign = '+' if delta >= 0 else ''
-    ax3.set_title(f'Early vs Late Performance\n'
-                  f'Net change: {sign}{delta:.3f} '
-                  f'(env escalated between halves)',
-                  fontsize=10, fontweight='bold')
-    ax3.set_ylim(0, 1.05)
-    ax3.grid(True, axis='y', alpha=0.2)
-    ax3.spines['top'].set_visible(False)
-    ax3.spines['right'].set_visible(False)
+    if os.path.exists(ep_path):
+        with open(ep_path) as f: ev = json.load(f)
+
+        # Load LLM baseline score if available
+        llm_score = None
+        llm_label = "LLM\n(zero-shot)"
+        if os.path.exists(llm_path):
+            with open(llm_path) as f: ld = json.load(f)
+            llm_score = ld.get("scores",{}).get("self_play_escalation",{}).get("score",None)
+            model_short = ld.get("model","LLM").split("/")[-1][:12]
+            llm_label = f"LLM\n({model_short}\nzero-shot)"
+
+        # Build agent list — insert LLM between Inference and PPO if available
+        agents  = ["Random","Heuristic","Greedy","Inference"]
+        a_colors= ['#bdc3c7','#85c1e9','#76d7c4','#f8c471']
+        a_scores= [ev.get(a,{}).get("score",0) for a in agents]
+
+        if llm_score is not None:
+            agents.append(llm_label)
+            a_colors.append('#e67e22')
+            a_scores.append(llm_score)
+
+        agents.append("PPO+Clf\n(trained)")
+        a_colors.append('#e74c3c')
+        a_scores.append(ev.get("PPO+Clf",{}).get("score",0))
+
+        x    = np.arange(len(agents))
+        bars = ax3.bar(x, a_scores, color=a_colors, alpha=0.88,
+                       edgecolor='white', linewidth=0.8, width=0.6)
+
+        for bar, val in zip(bars, a_scores):
+            ax3.text(bar.get_x()+bar.get_width()/2,
+                     bar.get_height()+0.012, f'{val:.3f}',
+                     ha='center', fontsize=8.5,
+                     fontweight='bold' if val==max(a_scores) else 'normal',
+                     color='#c0392b' if val==max(a_scores) else '#444')
+
+        ax3.set_xticks(x)
+        ax3.set_xticklabels(agents, fontsize=7.5)
+
+        # Annotate PPO vs LLM gap if both exist
+        ppo_score = ev.get("PPO+Clf",{}).get("score",0)
+        if llm_score is not None:
+            gap = ppo_score - llm_score
+            sign = '+' if gap >= 0 else ''
+            ax3.annotate(
+                f'TeachRL training\n{sign}{gap:.3f} vs LLM',
+                xy=(len(agents)-1, ppo_score),
+                xytext=(len(agents)-1-1.5, ppo_score+0.09),
+                fontsize=8, color='#c0392b', fontweight='bold',
+                arrowprops=dict(arrowstyle='->', color='#c0392b', lw=1.3))
+        else:
+            # Annotate PPO vs best rule-based
+            best_bl = max(a_scores[:-1])
+            delta   = ppo_score - best_bl
+            if delta > 0:
+                ax3.annotate(f'+{delta:.3f} vs\nbest baseline',
+                             xy=(len(agents)-1, ppo_score),
+                             xytext=(len(agents)-2.2, ppo_score+0.09),
+                             fontsize=8, color='#c0392b', fontweight='bold',
+                             arrowprops=dict(arrowstyle='->', color='#c0392b', lw=1.3))
+
+        # Divider line between rule-based and learned agents
+        if llm_score is not None:
+            ax3.axvline(len(agents)-2.5, color='#aaa', linestyle='--',
+                        linewidth=1, alpha=0.6)
+            ax3.text(len(agents)-2.5, 0.02, 'rule-based ←  → learned',
+                     ha='center', fontsize=7, color='#888', style='italic')
+
+        ax3.set_ylabel('Task Score  [0–1]', fontsize=10)
+        ax3.set_title('Raw LLM (zero-shot) vs PPO Trained on TeachRL\n'
+                      'Proves environment adds measurable value beyond prompting',
+                      fontsize=9.5, fontweight='bold')
+        ax3.set_ylim(0, 1.15)
+        ax3.grid(True, axis='y', alpha=0.2)
+        ax3.spines['top'].set_visible(False)
+        ax3.spines['right'].set_visible(False)
+    else:
+        ax3.text(0.5, 0.5, 'Run --eval first', ha='center', va='center',
+                 transform=ax3.transAxes, color='#aaa', fontsize=12)
 
     path = os.path.join(PLOTS_DIR, "self_play_escalation.png")
     plt.savefig(path, dpi=150, bbox_inches='tight')
@@ -750,7 +870,58 @@ def main():
     if args.plots_only:
         generate_all_plots(); return
 
+    summary = SummaryLogger()
     all_results = {}
+
+    # ── Baseline evaluation BEFORE any training ───────────────────────────────
+    if not args.eval_only and not args.plots_only:
+        print(f"\n{'='*60}")
+        print(f"  BASELINE EVALUATION (before any PPO training)")
+        print(f"  Agents: Random, Heuristic, Greedy, Inference")
+        print(f"{'='*60}")
+        from baseline.agents import (RandomAgent, HeuristicAgent,
+                                      GreedyArchetypeAgent, ArchetypeInferenceAgent)
+
+        baseline_log_path = os.path.join(LOG_DIR, "baseline_evaluation.log")
+        baseline_data     = {}
+
+        with open(baseline_log_path, "w") as bf:
+            bf.write("=" * 60 + "\n")
+            bf.write("  TeachRL — Baseline Evaluation (no training)\n")
+            bf.write(f"  Date: {__import__('datetime').datetime.now():%Y-%m-%d %H:%M:%S}\n")
+            bf.write(f"  Seed: {args.seed}  |  Episodes: {args.episodes}\n")
+            bf.write("=" * 60 + "\n\n")
+
+            for task_id in tasks:
+                Cls = GRADER_REGISTRY[task_id]
+                n   = min(args.episodes, 5) if task_id == "self_play_escalation" else args.episodes
+                bf.write(f"  Task: {task_id}\n")
+                bf.write(f"  {'─'*56}\n")
+                print(f"\n  Task: {task_id}")
+                task_scores = {}
+                for name, agent in [
+                    ("Random",    RandomAgent()),
+                    ("Heuristic", HeuristicAgent()),
+                    ("Greedy",    GreedyArchetypeAgent()),
+                    ("Inference", ArchetypeInferenceAgent()),
+                ]:
+                    r     = Cls(n_episodes=n).grade(agent)
+                    score = r.score
+                    bar   = "█" * int(score * 25) + "░" * (25 - int(score * 25))
+                    line  = f"  {name:<14} [{bar}] {score:.4f}"
+                    print(line)
+                    bf.write(line + "\n")
+                    task_scores[name] = score
+                baseline_data[task_id] = task_scores
+                bf.write("\n")
+
+            # Save baseline JSON
+            import json as _bj
+            with open(os.path.join(LOG_DIR, "baseline_scores.json"), "w") as bjf:
+                _bj.dump(baseline_data, bjf, indent=2)
+            bf.write("\nBaseline JSON saved → logs/baseline_scores.json\n")
+            print(f"\n  Baseline log → {baseline_log_path}")
+
     for task_id in tasks:
         if args.steps:
             TASK_CONFIGS[task_id]["total_timesteps"] = args.steps
@@ -758,10 +929,30 @@ def main():
             train_task(task_id=task_id, seed=args.seed, use_wandb=args.wandb)
         if args.eval or args.eval_only:
             r = evaluate_task(task_id, n_episodes=args.episodes, seed=args.seed)
-            if r: all_results[task_id] = r
+            if r:
+                all_results[task_id] = r
+                # Load reward history from saved JSON for summary
+                import json as _json
+                dp = os.path.join(DATA_DIR, f"training_{task_id}.json")
+                rewards = []
+                elapsed = 0
+                if os.path.exists(dp):
+                    with open(dp) as f: d = _json.load(f)
+                    rewards = d.get("rewards", [])
+                    elapsed = d.get("elapsed", 0)
+                summary.add_task_result(
+                    task_id=task_id,
+                    elapsed=elapsed,
+                    rewards=rewards,
+                    eval_scores={k: v["score"] for k,v in r.items()},
+                )
 
     if args.self_play or (args.eval and "self_play_escalation" in tasks):
         collect_self_play_data(n_episodes=args.episodes, seed=args.seed)
+
+    # Write master summary log
+    if all_results:
+        summary.write(seed=args.seed)
 
     generate_all_plots()
 

@@ -1,0 +1,80 @@
+======================================================================
+  TeachRL — Training Summary
+  Generated: 2026-04-26 11:37:21  |  Seed: 42
+======================================================================
+
+  Easy    | archetype_identification
+  ──────────────────────────────────────────────────────────────────
+  Training time:  00:39
+  Checkpoints:    10
+  Reward start:   7.8940
+  Reward end:     8.1604  (+0.2664)
+  Peak reward:    8.2091
+  Final Eval Scores:
+    Random         [░░░░░░░░░░░░░░░░░░░░] 0.0010
+    Heuristic      [░░░░░░░░░░░░░░░░░░░░] 0.0010
+    Greedy         [░░░░░░░░░░░░░░░░░░░░] 0.0010
+    Inference      [██████░░░░░░░░░░░░░░] 0.3004
+    PPO+Clf        [█████████░░░░░░░░░░░] 0.4652 ← 🏆
+  PPO vs best baseline: +0.1648
+
+  Medium  | adaptive_curriculum
+  ──────────────────────────────────────────────────────────────────
+  Training time:  01:41
+  Checkpoints:    20
+  Reward start:   14.1122
+  Reward end:     17.4962  (+3.3840)
+  Peak reward:    18.3976
+  Final Eval Scores:
+    Random         [████████████░░░░░░░░] 0.6207
+    Heuristic      [███████████████░░░░░] 0.7813
+    Greedy         [███████████████░░░░░] 0.7912
+    Inference      [███████████████░░░░░] 0.7891
+    PPO+Clf        [███████████████░░░░░] 0.7986 ← 🏆
+  PPO vs best baseline: +0.0074
+
+  Hard    | blind_teaching
+  ──────────────────────────────────────────────────────────────────
+  Training time:  03:28
+  Checkpoints:    40
+  Reward start:   28.6738
+  Reward end:     33.9124  (+5.2386)
+  Peak reward:    34.1137
+  Final Eval Scores:
+    Random         [███████████░░░░░░░░░] 0.5869
+    Heuristic      [█████████████░░░░░░░] 0.6888
+    Greedy         [█████████████░░░░░░░] 0.6757
+    Inference      [██████████████░░░░░░] 0.7481 ← 🏆
+    PPO+Clf        [██████████████░░░░░░] 0.7219
+  PPO vs best baseline: -0.0263
+
+  Expert  | self_play_escalation
+  ──────────────────────────────────────────────────────────────────
+  Training time:  04:37
+  Checkpoints:    50
+  Reward start:   28.8384
+  Reward end:     34.3482  (+5.5099)
+  Peak reward:    34.6612
+  Final Eval Scores:
+    Random         [████████████░░░░░░░░] 0.6134
+    Heuristic      [█████████████░░░░░░░] 0.6836
+    Greedy         [████████████░░░░░░░░] 0.6105
+    Inference      [████████████░░░░░░░░] 0.6480
+    PPO+Clf        [████████████████░░░░] 0.8091 ← 🏆
+  PPO vs best baseline: +0.1255
+
+======================================================================
+  FINAL RESULTS TABLE
+======================================================================
+  Agent                Easy   Medium     Hard   Expert
+  ────────────────────────────────────────────────────
+  Random             0.0010   0.6207   0.5869   0.6134
+  Heuristic          0.0010   0.7813   0.6888   0.6836
+  Greedy             0.0010   0.7912   0.6757   0.6105
+  Inference          0.3004   0.7891   0.7481   0.6480
+  PPO+Clf            0.4652   0.7986   0.7219   0.8091  ← trained
+
+  Total training time: 10:26
+
+  Log files: /home/praneeth-yeddu/teachrl/teachrl2/logs/
+======================================================================

@@ -1,0 +1,21 @@
+{
+  "model": "Qwen/Qwen2.5-72B-Instruct",
+  "scores": {
+    "archetype_identification": {
+      "score": 0.001,
+      "arch_acc": 0.0
+    },
+    "adaptive_curriculum": {
+      "score": 0.412,
+      "arch_acc": 0.0
+    },
+    "blind_teaching": {
+      "score": 0.43,
+      "arch_acc": 0.0
+    },
+    "self_play_escalation": {
+      "score": 0.399,
+      "arch_acc": 0.0
+    }
+  }
+}

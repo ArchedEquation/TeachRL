@@ -170,6 +170,28 @@ def run_self_improvement_test(agent_fn, agent_name, n_episodes=8):
     print(f"  {W}Episodes:{NC} {n_episodes}")
     print(f"  {W}Task:{NC} self_play_escalation (5×80 steps)\n")
 
+    # ── Setup log file ────────────────────────────────────────────────────────
+    import os as _os
+    from datetime import datetime as _dt
+    from logger import LOG_DIR, RUN_DIR
+    _log_subdir = _os.path.join(RUN_DIR, f"llm_self_improvement_{agent_name.replace(' ','_').replace('/','_')[:30]}")
+    _os.makedirs(_log_subdir, exist_ok=True)
+    _log_path = _os.path.join(_log_subdir, "self_improvement.log")
+    _lf = open(_log_path, "w", encoding="utf-8")
+
+    def _log(line="", also_print=True):
+        _lf.write(line + "\n"); _lf.flush()
+        if also_print: print(line)
+
+    _log("=" * 65)
+    _log(f"  TeachRL — LLM Self-Improvement Log")
+    _log(f"  Agent:    {agent_name}")
+    _log(f"  Episodes: {n_episodes}")
+    _log(f"  Started:  {_dt.now():%Y-%m-%d %H:%M:%S}")
+    _log(f"  Task:     self_play_escalation (5x80 steps)")
+    _log("=" * 65)
+    _log()
+
     escalator  = SelfPlayEscalator()
     env        = TeachRLEnv(task_id="self_play_escalation",
                             seed=42, eval_mode=True, escalator=escalator)
@@ -219,19 +241,25 @@ def run_self_improvement_test(agent_fn, agent_name, n_episodes=8):
                     "new_gen": new_gens[a.value],
                     "score": score,
                 })
+                esc_line = f"  ESCALATION! {a.value} -> Generation {new_gens[a.value]} (score={score:.3f})"
                 print(f"\n  {G}🔺 ESCALATION!{NC} {a.value} → "
                       f"Generation {new_gens[a.value]} "
                       f"(agent scored {score:.3f} ≥ 0.70, environment gets harder)")
+                _log(esc_line, also_print=False)
         gen_before = dict(new_gens)
 
-        # Print episode result
+        # Print and log episode result
         color = G if score >= 0.70 else Y if score >= 0.50 else R
+        ep_line = f"  Steps: {step} | Score: {score:.4f} | Eng: {obs.engagement:.2f} | Fat: {obs.fatigue:.2f}"
         print(f"  Steps: {step} | Score: [{bar(score,25,color)}] {color}{score:.4f}{NC} | "
               f"Eng: {obs.engagement:.2f} | Fat: {obs.fatigue:.2f}")
+        _log(ep_line, also_print=False)
 
         # Top 3 mastered concepts
         top3 = sorted(mastery.items(), key=lambda x: x[1], reverse=True)[:3]
-        print(f"  Top mastery: " + " | ".join(f"{c[:10]}:{v:.2f}" for c,v in top3))
+        top3_str = "  Top mastery: " + " | ".join(f"{c[:10]}:{v:.2f}" for c,v in top3)
+        print(top3_str)
+        _log(top3_str, also_print=False)
 
     # ── Final Summary ─────────────────────────────────────────────────────────
     print(f"\n  {W}{'='*63}{NC}")
@@ -294,6 +322,32 @@ def run_self_improvement_test(agent_fn, agent_name, n_episodes=8):
         print(f"  Try: python baseline/rl_agent.py --train --task self_play_escalation")
 
     print(f"  {W}{'─'*63}{NC}\n")
+
+    # ── Write summary to log file ─────────────────────────────────────────────
+    _log()
+    _log("=" * 65)
+    _log("  SUMMARY")
+    _log("=" * 65)
+    for i, s in enumerate(episode_scores):
+        trend = "UP" if i > 0 and s > episode_scores[i-1] else ("DOWN" if i > 0 and s < episode_scores[i-1] else "SAME")
+        _log(f"  Episode {i+1:>2}: {s:.4f}  {trend}")
+    _log()
+    _log(f"  Total escalations: {escalator.total_generation_sum()}")
+    _log(f"  Early avg score:   {float(np.mean(episode_scores[:3])):.4f}")
+    _log(f"  Late  avg score:   {float(np.mean(episode_scores[-3:])):.4f}")
+    improvement = float(np.mean(episode_scores[-3:])) - float(np.mean(episode_scores[:3]))
+    _log(f"  Net improvement:   {'+' if improvement>=0 else ''}{improvement:.4f}")
+    if escalation_events:
+        _log()
+        _log("  Escalation Events:")
+        for ev in escalation_events:
+            _log(f"    Ep {ev['episode']}: {ev['archetype']} Gen {ev['old_gen']} -> {ev['new_gen']} (score={ev['score']:.3f})")
+    _log()
+    _log(f"  Log saved -> {_log_path}")
+    _log("=" * 65)
+    _lf.close()
+    print(f"\n  Log saved -> {_log_path}")
+
     return escalation_events
 
 

@@ -1,0 +1,31 @@
+  Episode 1/8 | Archetype: overconfident_learner
+  Steps: 53 | Score: [██████░░░░░░░░░░░░░░░░░░░] 0.2523 | Eng: 0.07 | Fat: 1.00
+  Top mastery: algebra_ba:0.71 | quadratic_:0.34 | number_the:0.34
+  ───────────────────────────────────────────────────────────────
+  Episode 2/8 | Archetype: strategic_gamer
+  Steps: 80 | Score: [██████████░░░░░░░░░░░░░░░] 0.4139 | Eng: 1.00 | Fat: 1.00
+  Top mastery: linear_equ:0.91 | quadratic_:0.87 | algebra_ba:0.79
+  ───────────────────────────────────────────────────────────────
+  Episode 3/8 | Archetype: emotional_learner
+  Steps: 38 | Score: [█████████░░░░░░░░░░░░░░░░] 0.3970 | Eng: 0.06 | Fat: 0.76
+  Top mastery: probabilit:0.96 | algebra_ba:0.96 | quadratic_:0.76
+  ───────────────────────────────────────────────────────────────
+  Episode 4/8 | Archetype: impostor
+  Steps: 80 | Score: [█████████████░░░░░░░░░░░░] 0.5243 | Eng: 1.00 | Fat: 1.00
+  Top mastery: quadratic_:0.88 | statistics:0.88 | probabilit:0.87
+  ───────────────────────────────────────────────────────────────
+  Episode 5/8 | Archetype: strategic_gamer
+  Steps: 80 | Score: [█████████████░░░░░░░░░░░░] 0.5403 | Eng: 1.00 | Fat: 1.00
+  Top mastery: number_the:0.89 | algebra_ba:0.82 | quadratic_:0.48
+  ───────────────────────────────────────────────────────────────
+  Episode 6/8 | Archetype: overconfident_learner
+  Steps: 74 | Score: [████████████░░░░░░░░░░░░░] 0.4889 | Eng: 0.08 | Fat: 1.00
+  Top mastery: algebra_ba:0.74 | number_the:0.30 | calculus_i:0.29
+  ───────────────────────────────────────────────────────────────
+  Episode 7/8 | Archetype: anxious_perfectionist
+  Steps: 27 | Score: [███████████░░░░░░░░░░░░░░] 0.4799 | Eng: 0.05 | Fat: 1.00
+  Top mastery: linear_equ:0.96 | algebra_ba:0.95 | functions:0.93
+  ───────────────────────────────────────────────────────────────
+  Episode 8/8 | Archetype: overconfident_learner
+  Steps: 43 | Score: [███████████░░░░░░░░░░░░░░] 0.4495 | Eng: 0.09 | Fat: 0.86
+  Top mastery: algebra_ba:0.59 | linear_equ:0.31 | functions:0.30

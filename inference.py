@@ -24,6 +24,7 @@ TASKS = [
     {"id":"archetype_identification","targets":CONCEPTS,"goal":"Identify student archetype in 20 steps","max_steps":20},
     {"id":"adaptive_curriculum","targets":["algebra_basics","linear_equations","functions","probability","geometry"],"goal":"Master 5 concepts in 50 steps","max_steps":50},
     {"id":"blind_teaching","targets":CONCEPTS,"goal":"Infer and teach unknown archetype in 80 steps","max_steps":80},
+    {"id":"self_play_escalation","targets":CONCEPTS,"goal":"Teach auto-escalated student variants across 5x80 steps","max_steps":80},
 ]
 
 def log_start(task, env, model): print(f"[START] task={task} env={env} model={model}", flush=True)
